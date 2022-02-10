@@ -8,6 +8,20 @@ $BODY$
     END
 $BODY$ LANGUAGE plpgsql;
 ------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+-- Introduction to Create Function statement
+CREATE FUNCTION function_name(func_params1 int, func_params2 int)
+    RETURNS int
+    LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+
+BEGIN
+
+END
+$BODY$;
+------------------------------------------------------------------------------------------------------------------------
 
 --- In PostgreSQL, you use single quotes for a string constant like this:
 select 'String constant';
@@ -525,3 +539,98 @@ $BODY$
         end loop;
     END
 $BODY$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_wallet_count(id_from int, id_to int)
+    RETURNS int
+AS
+$BODY$
+DECLARE
+    wallet_count integer;
+BEGIN
+    select count(*)
+    into wallet_count
+    from fiio_wallet
+    where id between id_from and id_to;
+
+    return wallet_count;
+END;
+$BODY$ LANGUAGE plpgsql;
+
+SELECT get_wallet_count(100000, 100009);
+
+CREATE OR REPLACE FUNCTION get_wallet(wallet_id integer)
+    RETURNS fiio_wallet
+AS
+$BODY$
+DECLARE
+    wallet fiio_wallet;
+BEGIN
+    select * into wallet from fiio_wallet where id = wallet_id;
+    return wallet;
+END ;
+$BODY$ language plpgsql;
+
+select get_wallet(100007);
+
+SELECT get_wallet_count(id_from => 100001, id_to => 100009);
+SELECT get_wallet_count(id_from := 100001, id_to := 100009);
+
+
+-- function param in mode
+CREATE OR REPLACE FUNCTION get_wallet_number(wallet_id bigint)
+    RETURNS varchar
+    LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    wallet_number fiio_wallet.number%type;
+BEGIN
+    select number into wallet_number from fiio_wallet where id = wallet_id;
+
+    if not FOUND then
+        raise notice 'Wallet ID % not found', wallet_id;
+    end if;
+
+    return wallet_number;
+END
+$BODY$;
+
+select *
+from get_wallet(100007);
+select get_wallet(100007);
+
+-- parameter out mode
+CREATE OR REPLACE FUNCTION get_min_max_avg_balance(
+    out min_balance numeric,
+    out max_balance numeric,
+    out avg_balance numeric)
+    LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+
+BEGIN
+    select min(balance), max(balance), avg(balance)::numeric(10, 6)
+    into min_balance, max_balance, avg_balance
+    from fiio_wallet
+    where id between 100001 and 100009;
+END
+$BODY$;
+
+select *
+from get_min_max_avg_balance();
+
+-- in out mode
+create or replace function swap(
+    inout x integer,
+    inout y integer
+)
+    language plpgsql
+as
+$body$
+begin
+    select x,y into y,x;
+end
+$body$;
+
+select * from swap(x => 10 ,y => 20);
